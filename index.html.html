@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Master Slide Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #040d0d; --surface: #0a1a1a; --surface2: #0f2626;
+            --border: #1a3e3e; --accent: #00e5ff; --accent2: #00b3cc;
+            --text: #e6ffff; --muted: #80b3b3; --success: #00cc99;
+            --warning: #ffc000; --error: #ff4d4d; --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
+        }
+
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background-image: linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px; pointer-events: none; z-index: 0;
+        }
+
+        .container { width: 100%; max-width: 900px; padding: 40px 24px 80px; position: relative; z-index: 1; }
+        
+        .header { text-align: center; margin-bottom: 30px; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 100px; padding: 6px 16px; font-size: 11px; font-weight: 700;
+            color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px;
+        }
+        h1 {
+            font-size: clamp(28px, 5vw, 42px); font-weight: 800; line-height: 1.1; margin-bottom: 14px;
+            background: linear-gradient(135deg, #ffffff 0%, #00e5ff 60%, #008080 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
+        
+        .instruction-box { background: rgba(0, 229, 255, 0.05); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.5; }
+
+        textarea {
+            width: 100%; height: 400px; background: var(--surface2); color: var(--text);
+            border: 1px solid var(--border); border-radius: 8px; padding: 16px;
+            font-family: 'JetBrains Mono', monospace; font-size: 13px; resize: vertical; outline: none;
+            white-space: pre;
+        }
+        textarea:focus { border-color: var(--accent); }
+
+        .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; background: var(--surface2); transition: 0.2s;}
+        .upload-zone:hover { border-color: var(--accent); }
+        .upload-zone.has-file { border-color: var(--success); background: rgba(0, 204, 153, 0.05); }
+        #fileInput { display: none; }
+
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .config-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+        .config-row { display: flex; gap: 10px; margin-bottom: 8px; }
+        .config-row div { flex: 1; }
+        label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+        input[type="number"] { width: 100%; background: var(--bg); border: 1px solid var(--border); color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; }
+
+        .radio-group { display: flex; gap: 15px; margin-top: 10px; }
+        .radio-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; text-transform: none;}
+
+        .generate-btn {
+            width: 100%; padding: 16px 24px; background: linear-gradient(135deg, #00e5ff, #008080);
+            border: none; border-radius: var(--radius); color: #000; font-size: 16px; font-weight: 800; cursor: pointer; margin-bottom: 24px; transition: 0.2s;
+        }
+        .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 229, 255, 0.3); }
+        
+        .progress-section { display: none; }
+        .progress-section.visible { display: block; }
+        .progress-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .progress-bar { height: 6px; background: var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; }
+        .log-area { background: var(--surface2); padding: 12px; border-radius: 6px; max-height: 150px; overflow-y: auto; font-family: 'JetBrains Mono'; font-size: 11px; color: var(--muted); }
+        .log-ok { color: var(--success); }
+        .log-warn { color: var(--warning); }
+        .log-err { color: var(--error); }
+        
+        .result-section { display: none; text-align: center; }
+        .result-section.visible { display: block; }
+        .download-btn { background: var(--success); border: none; color: #000; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="badge">Unified Engine v6.10 (Smart Dynamic Width & Nuke Patch)</div>
+        <h1>Master Slide Automation</h1>
+        <p style="color: var(--muted); font-size: 14px;">Paste your entire Excel sheet below. The engine will figure it out.</p>
+    </div>
+
+    <div class="card">
+        <div class="instruction-box">
+            <strong style="color: var(--success); display:block; margin-bottom: 6px;">✨ Magic Detection is Active</strong>
+            Just copy and paste your data straight from Excel into the box below. 
+            The system automatically sorts Standard A4, MCQs, and CQs. Blank/invisible rows from Excel are automatically destroyed.
+        </div>
+
+        <textarea id="rawInputMaster" placeholder="Intro To Chemistry	This is standard A4 text...
+
+board	title	options_1_answer	options_1_is_correct...
+DHAKA	What is H2O?	Water	TRUE...
+
+CQ-1	Uddipok text here...
+গ)	Question text here...
+ঘ)	Answer text here..."></textarea>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+            <div class="radio-group" style="margin-top: 0;">
+                <span style="font-size: 12px; color: var(--muted); margin-right: 10px;">MCQ Language:</span>
+                <label class="radio-label"><input type="radio" name="labelFormat" value="bangla" checked> Bengali (ক, খ, গ, ঘ)</label>
+                <label class="radio-label"><input type="radio" name="labelFormat" value="english"> English (A, B, C, D)</label>
+            </div>
+            <button onclick="clearMemory()" style="background:transparent; border:1px solid #ff4d4d; color:#ff4d4d; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:11px;">🗑️ Clear Box</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 16px;">Global Template Setup</h3>
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size: 24px; margin-bottom:8px;">🖼️</div>
+            <div id="fileName" style="font-weight: bold; font-size:14px; color:var(--text);">Click to Upload Background Image</div>
+            <div style="font-size: 12px; color: var(--muted); margin-top:4px;">Applied to all generated slides</div>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFile()">
+
+        <div class="config-grid" style="margin-top: 20px;">
+            <div class="config-box">
+                <strong style="color: var(--warning); font-size: 13px; display:block; margin-bottom:12px;">Global Layout X/Y Settings</strong>
+                <div class="config-row">
+                    <div><label>X (Left)</label><input type="number" id="titleX" value="2.72" step="0.01"></div>
+                    <div><label>Y (Top)</label><input type="number" id="titleY" value="0.70" step="0.01"></div>
+                </div>
+                <div class="config-row">
+                    <div><label>Width</label><input type="number" id="titleW" value="6.8" step="0.1"></div>
+                    <div><label>Sub Size</label><input type="number" id="titleSize" value="18"></div>
+                </div>
+            </div>
+            
+            <div class="config-box">
+                <strong style="color: #ff6b6b; font-size: 13px; display:block; margin-bottom:12px;">MCQ Specific Layout</strong>
+                <div class="config-row">
+                    <div><label>Golden Line Y</label><input type="number" id="mcqY" value="0.80" step="0.01"></div>
+                    <div><label>Option Y Gap</label><input type="number" id="mcqGap" value="0.1" step="0.01"></div>
+                </div>
+                <div class="config-row" style="margin-top: 10px;">
+                    <span style="font-size: 11px; color: var(--muted); line-height: 1.4;">Sets the absolute Top 'Y' position of the Question Box to match your PPT background rulers.</span>
+                </div>
+            </div>
+
+            <div class="config-box">
+                <strong style="color: var(--text); font-size: 13px; display:block; margin-bottom:12px;">Global Body Settings</strong>
+                <div class="config-row">
+                    <div><label>X (Left)</label><input type="number" id="bodyX" value="2.72" step="0.01"></div>
+                    <div><label>Y (Top)</label><input type="number" id="bodyY" value="1.4" step="0.01"></div>
+                </div>
+                <div class="config-row">
+                    <div><label>Width</label><input type="number" id="bodyW" value="6.8" step="0.1"></div>
+                    <div><label>Body Size</label><input type="number" id="bodySize" value="18"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="generate-btn" id="generateBtn" onclick="generateUnifiedPPTX()">
+        ⚡ Compile & Generate Master PPTX
+    </button>
+
+    <div class="card progress-section" id="progressSection">
+        <div class="progress-header">
+            <div style="font-size: 13px; font-weight: 600;" id="progressLabel">Analyzing slides...</div>
+            <div style="font-size: 13px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono';" id="progressPct">0%</div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="log-area" id="logArea"></div>
+    </div>
+
+    <div class="card result-section" id="resultSection">
+        <div style="font-size: 20px; font-weight: 800; color: var(--success); margin-bottom: 16px;">✅ Master Presentation Ready!</div>
+        <button class="download-btn" id="downloadBtn">⬇ Download Unified PPTX</button>
+    </div>
+
+</div>
+
+<script>
+    const KEY = 'unified_master_slide_dashboard_v6_10';
+    let bgImage = null;
+    let generatedBlob = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadState();
+        document.querySelectorAll('input, textarea').forEach(el => {
+            el.addEventListener('input', saveState);
+        });
+    });
+
+    function saveState() {
+        const state = {
+            rawMaster: document.getElementById('rawInputMaster').value,
+            tX: document.getElementById('titleX').value,
+            tY: document.getElementById('titleY').value,
+            tW: document.getElementById('titleW').value,
+            tSz: document.getElementById('titleSize').value,
+            bX: document.getElementById('bodyX').value,
+            bY: document.getElementById('bodyY').value,
+            bW: document.getElementById('bodyW').value,
+            bSz: document.getElementById('bodySize').value,
+            mcqY: document.getElementById('mcqY').value,
+            mcqGap: document.getElementById('mcqGap').value,
+            labelFormat: document.querySelector('input[name="labelFormat"]:checked').value,
+            img: bgImage
+        };
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+    }
+
+    function loadState() {
+        const data = localStorage.getItem(KEY);
+        if(!data) return;
+        const state = JSON.parse(data);
+        
+        if(state.rawMaster) document.getElementById('rawInputMaster').value = state.rawMaster;
+        
+        document.getElementById('titleX').value = state.tX || "2.72";
+        document.getElementById('titleY').value = state.tY || "0.70";
+        document.getElementById('titleW').value = state.tW || "6.8";
+        document.getElementById('titleSize').value = state.tSz || "18";
+        document.getElementById('bodyX').value = state.bX || "2.72";
+        document.getElementById('bodyY').value = state.bY || "1.4";
+        document.getElementById('bodyW').value = state.bW || "6.8";
+        document.getElementById('bodySize').value = state.bSz || "18";
+        
+        document.getElementById('mcqY').value = state.mcqY || "0.80";
+        document.getElementById('mcqGap').value = state.mcqGap || "0.1";
+        
+        if(state.labelFormat) {
+            document.querySelector(`input[name="labelFormat"][value="${state.labelFormat}"]`).checked = true;
+        }
+
+        if(state.img) {
+            bgImage = state.img;
+            document.getElementById('dropZone').classList.add('has-file');
+            document.getElementById('fileName').innerText = "✅ Image Loaded";
+        }
+    }
+
+    function clearMemory() {
+        if(confirm("Clear all text data and reset layout?")) {
+            localStorage.removeItem(KEY);
+            location.reload();
+        }
+    }
+
+    function handleFile() {
+        const file = document.getElementById('fileInput').files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            bgImage = e.target.result;
+            document.getElementById('dropZone').classList.add('has-file');
+            document.getElementById('fileName').innerText = "✅ " + file.name;
+            saveState();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function log(msg, type='info') {
+        const el = document.getElementById('logArea');
+        const d = document.createElement('div');
+        d.className = type === 'ok' ? 'log-ok' : (type === 'warn' ? 'log-warn' : (type === 'err' ? 'log-err' : ''));
+        d.textContent = msg;
+        el.appendChild(d);
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function setProgress(pct, label) {
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressPct').textContent = Math.floor(pct) + '%';
+        if (label) document.getElementById('progressLabel').textContent = label;
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    const estHeight = (text, width, fSize, lineSpacingMult) => {
+        if(!text) return 0;
+        let str = text.toString().replace(/\\n/g, '\n').trim().replace(/\n{3,}/g, '\n\n');
+        const charsPerLine = width * (110 / fSize); 
+        const lines = str.split('\n').reduce((sum, line) => {
+            let visualLength = line.length * 0.65; 
+            return sum + Math.max(1, Math.ceil(visualLength / charsPerLine));
+        }, 0);
+        return (lines * (fSize / 72) * lineSpacingMult) + 0.25; 
+    };
+
+    async function generateUnifiedPPTX() {
+        const rawMasterData = document.getElementById('rawInputMaster').value;
+        if (!rawMasterData.trim()) return alert("The input box is empty. Please paste your data from Excel!");
+
+        document.getElementById('progressSection').classList.add('visible');
+        document.getElementById('resultSection').classList.remove('visible');
+        const genBtn = document.getElementById('generateBtn');
+        genBtn.disabled = true;
+        genBtn.style.opacity = '0.5';
+        document.getElementById('logArea').innerHTML = '';
+
+        try {
+            setProgress(5, 'Parsing Magic Data...');
+            log('▶ Starting Magic Data Detection Protocol');
+            await sleep(50);
+
+            const parsedAll = Papa.parse(rawMasterData, { delimiter: '\t', skipEmptyLines: 'greedy' });
+            let a4Lines = [];
+            let mcqRows = [];
+            let cqLines = [];
+            let mcqHeaders = null;
+            let currentMode = 'A4';
+
+            for (let row of parsedAll.data) {
+                // THE NUCLEAR SCRUBBER: Strips absolutely everything to check if row is a ghost
+                let cleanStringTest = row.join('').replace(/[\s\t\n\r\u200B-\u200D\uFEFF]/g, '');
+                if (cleanStringTest === '') continue; 
+                
+                let col1 = (row[0] || '').trim();
+                let rowStrLower = row.join('\t').toLowerCase();
+
+                // Detect MCQ Header
+                if (rowStrLower.includes('options_1_answer') || rowStrLower.includes('option_1_answer')) {
+                    currentMode = 'MCQ';
+                    mcqHeaders = row;
+                    continue; 
+                }
+
+                // Detect CQ Start
+                if (/^cq/i.test(col1)) {
+                    currentMode = 'CQ';
+                }
+
+                // Data Routing
+                if (currentMode === 'MCQ') {
+                    if (row.length >= 4) { 
+                        mcqRows.push(row.join('\t'));
+                    } else {
+                        if (/^cq/i.test(col1) || col1.match(/^["'“”‘’\s]*(\(?গ\)?|\(?ঘ\)?)[.)\s]/)) {
+                            currentMode = 'CQ';
+                            cqLines.push(row.join('\t'));
+                        } else {
+                            currentMode = 'A4';
+                            a4Lines.push(row.join('\t'));
+                        }
+                    }
+                } else if (currentMode === 'CQ') {
+                    cqLines.push(row.join('\t'));
+                } else {
+                    a4Lines.push(row.join('\t'));
+                }
+            }
+
+            let rawMCQData = '';
+            if (mcqHeaders && mcqRows.length > 0) {
+                rawMCQData = mcqHeaders.join('\t') + '\n' + mcqRows.join('\n');
+            }
+
+            // Final nuclear safety filter before arrays
+            const inputA4 = a4Lines.filter(l => l.replace(/[\s\t\n\r]/g, '') !== '');
+            const inputCQ = cqLines.filter(l => l.replace(/[\s\t\n\r]/g, '') !== '');
+
+            // --- STANDARD MCQ PARSING ---
+            let parsedMCQQuizzes = [];
+            if (rawMCQData) {
+                const parsed = Papa.parse(rawMCQData, {
+                    delimiter: '\t', header: true, skipEmptyLines: true, quoteChar: '"', escapeChar: '"'
+                });
+                
+                const rows = parsed.data;
+                for (let i = 0; i < rows.length; i++) {
+                    let row = rows[i];
+                    let lcRow = {};
+                    for (let key in row) {
+                        lcRow[key.trim().toLowerCase()] = row[key];
+                    }
+
+                    let title = (lcRow['title'] || lcRow['question'] || '').trim();
+                    if ((title.match(/'/g) || []).length % 2 !== 0) {
+                        title = title.replace(/(^|\s)([^'\s]+)'/, "$1'$2'");
+                    }
+                    if (!title) continue; 
+
+                    let opt1Ans = (lcRow['options_1_answer'] || lcRow['option_1_answer'] || '').trim();
+                    let opt2Ans = (lcRow['options_2_answer'] || lcRow['option_2_answer'] || '').trim();
+                    let opt3Ans = (lcRow['options_3_answer'] || lcRow['option_3_answer'] || '').trim();
+                    let opt4Ans = (lcRow['options_4_answer'] || lcRow['option_4_answer'] || '').trim();
+
+                    let checkCorrect = (val) => {
+                        if(!val) return false;
+                        let v = val.toString().trim().toLowerCase();
+                        return v === '1' || v === 'true' || v === 'yes';
+                    };
+
+                    parsedMCQQuizzes.push({
+                        title: title,
+                        board: (lcRow['board'] || '').trim(),
+                        options: [
+                            { text: opt1Ans, correct: checkCorrect(lcRow['options_1_is_correct'] || lcRow['option_1_is_correct']) },
+                            { text: opt2Ans, correct: checkCorrect(lcRow['options_2_is_correct'] || lcRow['option_2_is_correct']) },
+                            { text: opt3Ans, correct: checkCorrect(lcRow['options_3_is_correct'] || lcRow['option_3_is_correct']) },
+                            { text: opt4Ans, correct: checkCorrect(lcRow['options_4_is_correct'] || lcRow['option_4_is_correct']) }
+                        ]
+                    });
+                }
+            }
+
+            const mcqSlideCount = parsedMCQQuizzes.length * 2; 
+            const totalSlidesToProcess = inputA4.length + mcqSlideCount + inputCQ.length;
+
+            if(totalSlidesToProcess === 0) {
+                throw new Error("Could not detect any valid slide data. Make sure you copied directly from Excel.");
+            }
+
+            log(`Data Detected: ${inputA4.length} A4 | ${parsedMCQQuizzes.length} MCQs | ${inputCQ.length} CQs`, 'ok');
+
+            const pptx = new PptxGenJS();
+            pptx.layout = 'LAYOUT_16x9'; 
+
+            const tX = parseFloat(document.getElementById('titleX').value) || 2.72;
+            const tY = parseFloat(document.getElementById('titleY').value) || 0.70;
+            const tW = parseFloat(document.getElementById('titleW').value) || 6.8;
+            const tSz = parseInt(document.getElementById('titleSize').value) || 18;
+            const bX = parseFloat(document.getElementById('bodyX').value) || 2.72;
+            const bY = parseFloat(document.getElementById('bodyY').value) || 1.4;
+            const bW = parseFloat(document.getElementById('bodyW').value) || 6.8;
+            const bSz = parseInt(document.getElementById('bodySize').value) || 18;
+            
+            const mcqY = parseFloat(document.getElementById('mcqY').value) || 0.80;
+            const mcqGap = parseFloat(document.getElementById('mcqGap').value) || 0.1;
+            
+            const ROUND_BOX = pptx.shapes ? pptx.shapes.ROUNDED_RECTANGLE : pptx.ShapeType.roundRect;
+            const spacingVal = bSz * 1.5; 
+            const slideBottomLimit = 5.4; 
+
+            let processedCount = 0;
+
+            function createBaseSlide() {
+                let slide = pptx.addSlide();
+                if (bgImage) slide.background = { data: bgImage };
+                else slide.background = { color: "111111" };
+                return slide;
+            }
+
+            // ==========================================
+            // 1. Process A4 Standard Slides
+            // ==========================================
+            if(inputA4.length > 0) log(`--- Generating A4 Slides ---`, 'info');
+            for (let l of inputA4) {
+                let slide = createBaseSlide();
+                let cols = l.split('\t');
+                let rowTitle = (cols[0] || "").replace(/\\n/g, '\n').trim();
+                let rowBody = (cols[1] || "").replace(/\\n/g, '\n').trim();
+
+                let titleEst = estHeight(rowTitle, tW, tSz, 1.2); 
+                let dynBY = Math.max(bY, tY + titleEst + 0.1);
+
+                slide.addText(rowTitle, {
+                    x: tX, y: tY, w: tW, h: titleEst,
+                    fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
+                    valign: 'top', lineSpacing: tSz * 1.2, fit: 'shrink'
+                });
+
+                if (rowBody) {
+                    let bullets = rowBody.split('\n').filter(txt => txt.trim());
+                    if(bullets.length === 0) bullets = [rowBody];
+
+                    let textItems = bullets.map(txt => ({
+                        text: txt,
+                        options: { fontSize: bSz, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacing: spacingVal }
+                    }));
+
+                    slide.addText(textItems, {
+                        x: bX, y: dynBY, w: bW, h: Math.max(1.0, slideBottomLimit - dynBY),
+                        align: 'left', valign: 'top', bullet: { type: 'bull', code: '2022' }, wrap: true, fit: 'shrink'
+                    });
+                }
+                processedCount++;
+                setProgress(10 + (processedCount / totalSlidesToProcess) * 80, `Formatting A4...`);
+                await sleep(5);
+            }
+
+            // ==========================================
+            // 2. Process MCQ Slides (SMART WIDTH PATCH)
+            // ==========================================
+            if(parsedMCQQuizzes.length > 0) {
+                log(`--- Generating MCQ Slides ---`, 'info');
+                const labelFormat = document.querySelector('input[name="labelFormat"]:checked').value;
+                const labels = labelFormat === 'english' ? ['A', 'B', 'C', 'D'] : ['ক', 'খ', 'গ', 'ঘ'];
+
+                for (let i = 0; i < parsedMCQQuizzes.length; i++) {
+                    const quiz = parsedMCQQuizzes[i];
+                    
+                    const buildMCQSlide = (showAnswer) => {
+                        let slide = createBaseSlide();
+                        const qNumText = 'MCQ-' + (i+1).toString().padStart(2, '0');
+                        
+                        let qEst = estHeight(qNumText + "\n" + quiz.title, bW - 0.4, bSz, 1.2);
+                        const qBoxH = Math.max(0.6, qEst + 0.15);
+
+                        slide.addText([
+                            { text: qNumText, options: { color: "FFA500", bold: true, fontSize: bSz, breakLine: true } },
+                            { text: quiz.title, options: { color: "FFFFFF", bold: true, fontSize: bSz } }
+                        ], {
+                            shape: ROUND_BOX, fill: { color: "222222" },
+                            x: bX, y: mcqY, w: bW, h: qBoxH,
+                            align: "left", valign: "top", margin: 10, fontFace: "Kalpurush", wrap: true, lineSpacing: bSz * 1.2, fit: 'shrink'
+                        });
+
+                        // SMART DYNAMIC WIDTH CALCULATION
+                        let maxTextLen = 0;
+                        for (let j = 0; j < 4; j++) {
+                            let opt = quiz.options[j];
+                            if (!opt.text) continue;
+                            let textLen = (`${labels[j]}. ${opt.text}`).length;
+                            if (textLen > maxTextLen) maxTextLen = textLen;
+                        }
+
+                        // Rough estimate: ~0.13 inches per character at given font size, plus 0.4 margin padding
+                        let charWidthInches = (bSz / 18) * 0.13; 
+                        let estimatedW = (maxTextLen * charWidthInches) + 0.4; 
+
+                        // Keep it between 2.5 inches (sleek button) and the maximum allowed width (bW)
+                        const optW = Math.max(2.5, Math.min(bW, estimatedW));
+                        const optX = bX + bW - optW; // Anchor to the right edge
+                        
+                        let currentY = mcqY + qBoxH + mcqGap;
+
+                        let uniformOptH = 0.45;
+                        for (let j = 0; j < 4; j++) {
+                            let opt = quiz.options[j];
+                            if (!opt.text) continue;
+                            let optEst = estHeight(`${labels[j]}. ${opt.text}`, optW - 0.4, bSz, 1.2);
+                            if (optEst > uniformOptH) {
+                                uniformOptH = optEst;
+                            }
+                        }
+
+                        if (quiz.board && quiz.board.length > 0) {
+                            let boardEst = estHeight(quiz.board, optW - 0.2, 12, 1.2);
+                            let boardH = Math.max(0.35, boardEst);
+                            
+                            slide.addText(quiz.board, {
+                                shape: ROUND_BOX, fill: { color: "FFA500" }, color: "000000",
+                                x: optX, y: currentY, w: optW, h: boardH, 
+                                align: "center", valign: "middle", fontSize: 12, fontFace: "Kalpurush", bold: true, fit: 'shrink'
+                            });
+                            currentY += boardH + mcqGap; 
+                        }
+
+                        for (let j = 0; j < 4; j++) {
+                            let opt = quiz.options[j];
+                            if (!opt.text) continue;
+                            let isCorrect = opt.correct && showAnswer;
+
+                            slide.addText(`${labels[j]}. ${opt.text}`, {
+                                shape: ROUND_BOX, fill: { color: isCorrect ? "11FF7D" : "222222" }, color: isCorrect ? "000000" : "FFFFFF",
+                                x: optX, y: currentY, w: optW, h: uniformOptH,
+                                align: "left", valign: "middle", margin: 10, fontSize: bSz, fontFace: "Kalpurush", bold: true, wrap: true, lineSpacing: bSz * 1.2, fit: 'shrink'
+                            });
+                            currentY += uniformOptH + mcqGap; 
+                        }
+                    };
+
+                    buildMCQSlide(false);
+                    processedCount++;
+                    buildMCQSlide(true);
+                    processedCount++;
+
+                    setProgress(10 + (processedCount / totalSlidesToProcess) * 80, `Formatting MCQ Quiz ${i+1}...`);
+                    await sleep(5);
+                }
+            }
+
+            // ==========================================
+            // 3. Process CQ Smart Memory Slides
+            // ==========================================
+            if(inputCQ.length > 0) log(`--- Generating CQ Slides ---`, 'info');
+            let memoryTitle = "CQ";
+            let memoryUddipok = "";
+
+            for (let i = 0; i < inputCQ.length; i++) {
+                let slide = createBaseSlide();
+                let cols = inputCQ[i].split('\t');
+                let rowTextT = cols[0] ? cols[0].trim() : "";
+                let rowTextB = cols[1] ? cols[1].trim() : "";
+                let fullText = rowTextT + "\n" + rowTextB;
+
+                let isCQFrontPage = !!fullText.match(/CQ\s*-\s*\d+/i) || !!rowTextT.match(/CQ/i);
+
+                if (isCQFrontPage) {
+                    let titleMatch = fullText.match(/(CQ\s*-\s*\d+|CQ)([:।.-]*)/i);
+                    memoryTitle = titleMatch ? titleMatch[1] : "CQ";
+
+                    let remainingText = fullText.replace(/(CQ\s*-\s*\d+|CQ)([:।.-]*)\s*/i, "").trim();
+                    let qRegex = /(^|\n)(\s*["'“”‘’\s]*(\(?ক\)?|\(?খ\)?|\(?গ\)?|\(?ঘ\)?)[.)\s])/;
+                    let questionMatch = remainingText.match(qRegex);
+
+                    let localUddipok = "";
+                    let localQA = "";
+
+                    if (questionMatch) {
+                        let qIndex = questionMatch.index;
+                        if (remainingText.charAt(qIndex) === '\n') qIndex += 1;
+                        localUddipok = remainingText.substring(0, qIndex).trim();
+                        localQA = remainingText.substring(qIndex).trim();
+                    } else {
+                        localUddipok = remainingText;
+                    }
+
+                    if (localUddipok.length > 5) memoryUddipok = localUddipok;
+
+                    if (localQA) {
+                        localQA = localQA.replace(/([^\n])\s*(ক\.|খ\.|গ\.|ঘ\.|ক\)|খ\)|গ\)|ঘ\)|[(]ক[)]|[(]খ[)]|[(]গ[)]|[(]ঘ[)])/g, '$1\n$2');
+                        localQA = localQA.split('\n').map(l => l.trim()).filter(l => l.length > 0).join('\n');
+                    }
+
+                    let uddipokClean = memoryUddipok.replace(/\\n/g, '\n').trim().replace(/\n{3,}/g, '\n\n');
+                    let uddipokEst = estHeight(memoryTitle + "। " + uddipokClean, bW - 0.4, bSz, 1.2);
+                    let dynamicBoxHeightFront = Math.max(0.5, uddipokEst);
+
+                    slide.addText([
+                        { text: memoryTitle + "। ", options: { color: "FFFFFF", bold: true, fontSize: bSz } },
+                        { text: uddipokClean, options: { color: "FFFFFF", fontSize: bSz, lineSpacing: bSz * 1.2 } } 
+                    ], {
+                        shape: ROUND_BOX, fill: { color: "222222" }, x: bX, y: tY, w: bW, h: dynamicBoxHeightFront, 
+                        align: 'left', valign: 'top', margin: 10, fontFace: "Kalpurush", wrap: true, fit: 'shrink'
+                    });
+
+                    if (localQA.trim().length > 0) {
+                        let qaTextItems = [];
+                        localQA.split('\n').forEach(line => {
+                            let cleanLine = line.trim();
+                            if (!cleanLine) return;
+                            if (cleanLine.match(/^["'“”‘’\s]*(ক|খ|গ|ঘ)[.)\s]/)) {
+                                qaTextItems.push({ text: cleanLine, options: { color: "FFC000", bold: true, fontSize: bSz, breakLine: true } });
+                            } else {
+                                qaTextItems.push({ text: cleanLine, options: { color: "FFFFFF", bold: false, fontSize: bSz, breakLine: true } });
+                            }
+                        });
+
+                        slide.addText(qaTextItems, {
+                            x: bX, y: tY + dynamicBoxHeightFront + 0.1, w: bW, h: Math.max(1.0, slideBottomLimit - (tY + dynamicBoxHeightFront + 0.1)), 
+                            fontFace: "Kalpurush", align: 'left', valign: 'top', lineSpacing: spacingVal, wrap: true, fit: "shrink"
+                        });
+                    }
+
+                } else {
+                    let hasG_Gh = fullText.match(/(^|\n)\s*["'“”‘’\s]*(\(?গ\)?|\(?ঘ\)?)[.)\s]/);
+                    let hasK_Kh = fullText.match(/(^|\n)\s*["'“”‘’\s]*(\(?ক\)?|\(?খ\)?)[.)\s]/);
+
+                    if (hasG_Gh && !hasK_Kh) {
+                        let uddipokClean = memoryUddipok.replace(/\\n/g, '\n').trim().replace(/\n{3,}/g, '\n\n');
+                        let uddipokEst = estHeight(memoryTitle + "। " + uddipokClean, bW - 0.4, 12, 1.2);
+                        let dynamicBoxHeightGGh = Math.max(0.4, uddipokEst);
+
+                        slide.addText([
+                            { text: memoryTitle + "। ", options: { color: "FFFFFF", bold: true, fontSize: 12 } },
+                            { text: uddipokClean, options: { color: "FFFFFF", fontSize: 12, lineSpacing: 12 * 1.2 } }
+                        ], {
+                            shape: ROUND_BOX, fill: { color: "222222" }, x: bX, y: tY, w: bW, h: dynamicBoxHeightGGh,  
+                            align: 'left', valign: 'top', margin: 10, fontFace: "Kalpurush", wrap: true, fit: 'shrink'
+                        });
+
+                        let gGhFullText = fullText.replace(/([^\n])\s*(খ\.|গ\.|ঘ\.|[(]খ[)]|[(]গ[)]|[(]ঘ[)])/g, '$1\n$2');
+                        gGhFullText = gGhFullText.split('\n').map(l => l.trim()).filter(l => l.length > 0).join('\n');
+
+                        let qaTextItems = [];
+                        let hasColoredFirstQuestion = false; 
+                        gGhFullText.split('\n').forEach(line => {
+                            let cleanLine = line.trim();
+                            if (!cleanLine) return;
+                            if (!hasColoredFirstQuestion && cleanLine.match(/^["'“”‘’\s]*(গ|ঘ)[.)\s]/)) {
+                                qaTextItems.push({ text: cleanLine, options: { color: "FFC000", bold: true, fontSize: bSz, breakLine: true } });
+                                hasColoredFirstQuestion = true; 
+                            } else {
+                                qaTextItems.push({ text: cleanLine, options: { color: "FFFFFF", bold: false, fontSize: bSz, breakLine: true } });
+                            }
+                        });
+
+                        slide.addText(qaTextItems, {
+                            x: bX, y: tY + dynamicBoxHeightGGh + 0.1, w: bW, h: Math.max(1.0, slideBottomLimit - (tY + dynamicBoxHeightGGh + 0.1)), 
+                            fontFace: "Kalpurush", align: 'left', valign: 'top', lineSpacing: spacingVal, wrap: true, fit: "shrink"
+                        });
+
+                    } else {
+                        let titleClean = rowTextT.replace(/\\n/g, '\n').trim();
+                        let titleEst = estHeight(titleClean, tW, tSz, 1.2); 
+                        let dynBY = Math.max(bY, tY + titleEst + 0.1);
+
+                        slide.addText(titleClean, {
+                            x: tX, y: tY, w: tW, h: titleEst, fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
+                            valign: 'top', lineSpacing: tSz * 1.2, fit: 'shrink'
+                        });
+
+                        if (rowTextB) {
+                            let bullets = rowTextB.split('\\n').filter(l => l.trim());
+                            if(bullets.length === 0) bullets = [rowTextB];
+
+                            let textItems = bullets.map(txt => ({
+                                text: txt, options: { fontSize: bSz, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacing: spacingVal }
+                            }));
+
+                            slide.addText(textItems, {
+                                x: bX, y: dynBY, w: bW, h: Math.max(1.0, slideBottomLimit - dynBY), 
+                                align: 'left', valign: 'top', bullet: { type: 'bull', code: '2022' }, wrap: true, fit: "shrink"
+                            });
+                        }
+                    }
+                }
+                processedCount++;
+                setProgress(10 + (processedCount / totalSlidesToProcess) * 80, `Formatting CQ...`);
+                await sleep(5);
+            }
+
+            setProgress(90, 'Packaging Master PPTX file...');
+            log('💾 Serializing unified PPTX...', 'info');
+            await sleep(50);
+
+            generatedBlob = await pptx.write({ outputType: 'blob' });
+
+            setProgress(100, 'Done!');
+            log(`✅ Compilation complete! Total slides: ${totalSlidesToProcess}`, 'ok');
+            
+            document.getElementById('resultSection').classList.add('visible');
+            
+            document.getElementById('downloadBtn').onclick = () => {
+                const url = URL.createObjectURL(generatedBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Master_Unified_Slides.pptx';
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+        } catch (e) {
+            log('❌ Error: ' + e.message, 'err');
+            alert("Error generating slides: " + e.message);
+        } finally {
+            genBtn.disabled = false;
+            genBtn.style.opacity = '1';
+        }
+    }
+</script>
+
+</body>
+</html>
