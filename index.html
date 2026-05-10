@@ -47,22 +47,13 @@
 
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
         
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .tab-btn {
-            background: transparent; color: var(--muted); border: 1px solid transparent;
-            padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 14px; flex: 1;
-        }
-        .tab-btn.active { background: var(--surface2); color: var(--accent); border-color: var(--border); }
-        .tab-btn:hover:not(.active) { color: var(--text); }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .instruction-box { background: rgba(0, 229, 255, 0.05); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.5; }
 
         textarea {
-            width: 100%; height: 220px; background: var(--surface2); color: var(--text);
+            width: 100%; height: 400px; background: var(--surface2); color: var(--text);
             border: 1px solid var(--border); border-radius: 8px; padding: 16px;
             font-family: 'JetBrains Mono', monospace; font-size: 13px; resize: vertical; outline: none;
+            white-space: pre;
         }
         textarea:focus { border-color: var(--accent); }
 
@@ -106,47 +97,34 @@
 
 <div class="container">
     <div class="header">
-        <div class="badge">Unified Engine v6.4 (Refined Golden Line)</div>
+        <div class="badge">Unified Engine v6.10 (Smart Dynamic Width & Nuke Patch)</div>
         <h1>Master Slide Automation</h1>
-        <p style="color: var(--muted); font-size: 14px;">Compiles A4 Standard ➔ MCQ (Pro Layout) ➔ CQ into a single presentation.</p>
+        <p style="color: var(--muted); font-size: 14px;">Paste your entire Excel sheet below. The engine will figure it out.</p>
     </div>
 
     <div class="card">
-        <div class="tabs">
-            <button class="tab-btn active" id="btn-a4" onclick="switchTab('a4')">1. A4 Standard</button>
-            <button class="tab-btn" id="btn-mcq" onclick="switchTab('mcq')">2. MCQ (Data Sync)</button>
-            <button class="tab-btn" id="btn-cq" onclick="switchTab('cq')">3. CQ Smart Engine</button>
+        <div class="instruction-box">
+            <strong style="color: var(--success); display:block; margin-bottom: 6px;">✨ Magic Detection is Active</strong>
+            Just copy and paste your data straight from Excel into the box below. 
+            The system automatically sorts Standard A4, MCQs, and CQs. Blank/invisible rows from Excel are automatically destroyed.
         </div>
 
-        <div id="tab-a4" class="tab-content active">
-            <label style="color: var(--accent); display:block; margin-bottom:8px;">Paste A4 Standard Data (Subheading [Tab] Body Text)</label>
-            <textarea id="rawInputA4" placeholder="Standard Subheading [Tab] Body Text..."></textarea>
-        </div>
+        <textarea id="rawInputMaster" placeholder="Intro To Chemistry	This is standard A4 text...
 
-        <div id="tab-mcq" class="tab-content">
-            <label style="color: #ff6b6b; display:block; margin-bottom:8px;">Paste MCQ Data (Tab-separated from Excel)</label>
-            <textarea id="rawInputMCQ" placeholder="Paste tab-separated data including Board, title, options_1_answer, options_1_is_correct..."></textarea>
-            
-            <div style="margin-top: 15px; padding: 15px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;">
-                <label style="color: var(--text);">Option Labels Configuration:</label>
-                <div class="radio-group">
-                    <label class="radio-label">
-                        <input type="radio" name="labelFormat" value="bangla" checked> Bengali (ক, খ, গ, ঘ)
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="labelFormat" value="english"> English (A, B, C, D)
-                    </label>
-                </div>
-            </div>
-        </div>
+board	title	options_1_answer	options_1_is_correct...
+DHAKA	What is H2O?	Water	TRUE...
 
-        <div id="tab-cq" class="tab-content">
-            <label style="color: var(--success); display:block; margin-bottom:8px;">Paste CQ Data (Smart Memory Engine)</label>
-            <textarea id="rawInputCQ" placeholder="CQ - 1... [Tab] Body Text..."></textarea>
-        </div>
+CQ-1	Uddipok text here...
+গ)	Question text here...
+ঘ)	Answer text here..."></textarea>
         
-        <div style="text-align: right; margin-top: 10px;">
-            <button onclick="clearMemory()" style="background:transparent; border:1px solid #ff4d4d; color:#ff4d4d; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:11px;">🗑️ Clear All Tabs</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+            <div class="radio-group" style="margin-top: 0;">
+                <span style="font-size: 12px; color: var(--muted); margin-right: 10px;">MCQ Language:</span>
+                <label class="radio-label"><input type="radio" name="labelFormat" value="bangla" checked> Bengali (ক, খ, গ, ঘ)</label>
+                <label class="radio-label"><input type="radio" name="labelFormat" value="english"> English (A, B, C, D)</label>
+            </div>
+            <button onclick="clearMemory()" style="background:transparent; border:1px solid #ff4d4d; color:#ff4d4d; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:11px;">🗑️ Clear Box</button>
         </div>
     </div>
 
@@ -221,16 +199,9 @@
 </div>
 
 <script>
-    const KEY = 'unified_master_slide_dashboard_v6_4';
+    const KEY = 'unified_master_slide_dashboard_v6_10';
     let bgImage = null;
     let generatedBlob = null;
-
-    function switchTab(tabId) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        document.getElementById('btn-' + tabId).classList.add('active');
-        document.getElementById('tab-' + tabId).classList.add('active');
-    }
 
     window.addEventListener('DOMContentLoaded', () => {
         loadState();
@@ -241,9 +212,7 @@
 
     function saveState() {
         const state = {
-            rawA4: document.getElementById('rawInputA4').value,
-            rawMCQ: document.getElementById('rawInputMCQ').value,
-            rawCQ: document.getElementById('rawInputCQ').value,
+            rawMaster: document.getElementById('rawInputMaster').value,
             tX: document.getElementById('titleX').value,
             tY: document.getElementById('titleY').value,
             tW: document.getElementById('titleW').value,
@@ -264,9 +233,9 @@
         const data = localStorage.getItem(KEY);
         if(!data) return;
         const state = JSON.parse(data);
-        document.getElementById('rawInputA4').value = state.rawA4 || "";
-        document.getElementById('rawInputMCQ').value = state.rawMCQ || "";
-        document.getElementById('rawInputCQ').value = state.rawCQ || "";
+        
+        if(state.rawMaster) document.getElementById('rawInputMaster').value = state.rawMaster;
+        
         document.getElementById('titleX').value = state.tX || "2.72";
         document.getElementById('titleY').value = state.tY || "0.70";
         document.getElementById('titleW').value = state.tW || "6.8";
@@ -339,66 +308,8 @@
     };
 
     async function generateUnifiedPPTX() {
-        const inputA4 = document.getElementById('rawInputA4').value.split('\n').filter(l => l.trim() !== "");
-        const rawMCQData = document.getElementById('rawInputMCQ').value.trim();
-        const inputCQ = document.getElementById('rawInputCQ').value.split('\n').filter(l => l.trim() !== "");
-
-        let parsedMCQQuizzes = [];
-        if (rawMCQData) {
-            const parsed = Papa.parse(rawMCQData, {
-                delimiter: '\t', header: true, skipEmptyLines: true, quoteChar: '"', escapeChar: '"'
-            });
-            
-            const rows = parsed.data;
-            
-            for (let i = 0; i < rows.length; i++) {
-                let row = rows[i];
-                let lcRow = {};
-                for (let key in row) {
-                    lcRow[key.trim().toLowerCase()] = row[key];
-                }
-
-                let title = (lcRow['title'] || lcRow['question'] || '').trim();
-                
-                // EXCEL AUTO-FIX: Excel often drops the leading single quote if it's the first char of a cell.
-                // If we see an odd number of single quotes, reconstruct the missing opening quote.
-                if ((title.match(/'/g) || []).length % 2 !== 0) {
-                    title = title.replace(/(^|\s)([^'\s]+)'/, "$1'$2'");
-                }
-
-                if (!title) continue; 
-
-                let opt1Ans = (lcRow['options_1_answer'] || lcRow['option_1_answer'] || '').trim();
-                let opt2Ans = (lcRow['options_2_answer'] || lcRow['option_2_answer'] || '').trim();
-                let opt3Ans = (lcRow['options_3_answer'] || lcRow['option_3_answer'] || '').trim();
-                let opt4Ans = (lcRow['options_4_answer'] || lcRow['option_4_answer'] || '').trim();
-
-                let checkCorrect = (val) => {
-                    if(!val) return false;
-                    let v = val.toString().trim().toLowerCase();
-                    return v === '1' || v === 'true' || v === 'yes';
-                };
-
-                parsedMCQQuizzes.push({
-                    title: title,
-                    board: (lcRow['board'] || '').trim(),
-                    options: [
-                        { text: opt1Ans, correct: checkCorrect(lcRow['options_1_is_correct'] || lcRow['option_1_is_correct']) },
-                        { text: opt2Ans, correct: checkCorrect(lcRow['options_2_is_correct'] || lcRow['option_2_is_correct']) },
-                        { text: opt3Ans, correct: checkCorrect(lcRow['options_3_is_correct'] || lcRow['option_3_is_correct']) },
-                        { text: opt4Ans, correct: checkCorrect(lcRow['options_4_is_correct'] || lcRow['option_4_is_correct']) }
-                    ]
-                });
-            }
-        }
-
-        const mcqSlideCount = parsedMCQQuizzes.length * 2; 
-        const totalSlidesToProcess = inputA4.length + mcqSlideCount + inputCQ.length;
-
-        if(totalSlidesToProcess === 0) return alert("All tabs are empty or invalid. Please provide data!");
-
-        const proceed = confirm(`Found Data For:\n\n- ${inputA4.length} A4 Standard Slides\n- ${parsedMCQQuizzes.length} MCQs (Generates ${mcqSlideCount} Slides)\n- ${inputCQ.length} CQ Slides\n\nTotal Slides: ${totalSlidesToProcess}\n\nProceed with generation?`);
-        if(!proceed) return;
+        const rawMasterData = document.getElementById('rawInputMaster').value;
+        if (!rawMasterData.trim()) return alert("The input box is empty. Please paste your data from Excel!");
 
         document.getElementById('progressSection').classList.add('visible');
         document.getElementById('resultSection').classList.remove('visible');
@@ -408,9 +319,119 @@
         document.getElementById('logArea').innerHTML = '';
 
         try {
-            setProgress(5, 'Initializing engine...');
-            log('▶ Starting Master Generation Process');
+            setProgress(5, 'Parsing Magic Data...');
+            log('▶ Starting Magic Data Detection Protocol');
             await sleep(50);
+
+            const parsedAll = Papa.parse(rawMasterData, { delimiter: '\t', skipEmptyLines: 'greedy' });
+            let a4Lines = [];
+            let mcqRows = [];
+            let cqLines = [];
+            let mcqHeaders = null;
+            let currentMode = 'A4';
+
+            for (let row of parsedAll.data) {
+                // THE NUCLEAR SCRUBBER: Strips absolutely everything to check if row is a ghost
+                let cleanStringTest = row.join('').replace(/[\s\t\n\r\u200B-\u200D\uFEFF]/g, '');
+                if (cleanStringTest === '') continue; 
+                
+                let col1 = (row[0] || '').trim();
+                let rowStrLower = row.join('\t').toLowerCase();
+
+                // Detect MCQ Header
+                if (rowStrLower.includes('options_1_answer') || rowStrLower.includes('option_1_answer')) {
+                    currentMode = 'MCQ';
+                    mcqHeaders = row;
+                    continue; 
+                }
+
+                // Detect CQ Start
+                if (/^cq/i.test(col1)) {
+                    currentMode = 'CQ';
+                }
+
+                // Data Routing
+                if (currentMode === 'MCQ') {
+                    if (row.length >= 4) { 
+                        mcqRows.push(row.join('\t'));
+                    } else {
+                        if (/^cq/i.test(col1) || col1.match(/^["'“”‘’\s]*(\(?গ\)?|\(?ঘ\)?)[.)\s]/)) {
+                            currentMode = 'CQ';
+                            cqLines.push(row.join('\t'));
+                        } else {
+                            currentMode = 'A4';
+                            a4Lines.push(row.join('\t'));
+                        }
+                    }
+                } else if (currentMode === 'CQ') {
+                    cqLines.push(row.join('\t'));
+                } else {
+                    a4Lines.push(row.join('\t'));
+                }
+            }
+
+            let rawMCQData = '';
+            if (mcqHeaders && mcqRows.length > 0) {
+                rawMCQData = mcqHeaders.join('\t') + '\n' + mcqRows.join('\n');
+            }
+
+            // Final nuclear safety filter before arrays
+            const inputA4 = a4Lines.filter(l => l.replace(/[\s\t\n\r]/g, '') !== '');
+            const inputCQ = cqLines.filter(l => l.replace(/[\s\t\n\r]/g, '') !== '');
+
+            // --- STANDARD MCQ PARSING ---
+            let parsedMCQQuizzes = [];
+            if (rawMCQData) {
+                const parsed = Papa.parse(rawMCQData, {
+                    delimiter: '\t', header: true, skipEmptyLines: true, quoteChar: '"', escapeChar: '"'
+                });
+                
+                const rows = parsed.data;
+                for (let i = 0; i < rows.length; i++) {
+                    let row = rows[i];
+                    let lcRow = {};
+                    for (let key in row) {
+                        lcRow[key.trim().toLowerCase()] = row[key];
+                    }
+
+                    let title = (lcRow['title'] || lcRow['question'] || '').trim();
+                    if ((title.match(/'/g) || []).length % 2 !== 0) {
+                        title = title.replace(/(^|\s)([^'\s]+)'/, "$1'$2'");
+                    }
+                    if (!title) continue; 
+
+                    let opt1Ans = (lcRow['options_1_answer'] || lcRow['option_1_answer'] || '').trim();
+                    let opt2Ans = (lcRow['options_2_answer'] || lcRow['option_2_answer'] || '').trim();
+                    let opt3Ans = (lcRow['options_3_answer'] || lcRow['option_3_answer'] || '').trim();
+                    let opt4Ans = (lcRow['options_4_answer'] || lcRow['option_4_answer'] || '').trim();
+
+                    let checkCorrect = (val) => {
+                        if(!val) return false;
+                        let v = val.toString().trim().toLowerCase();
+                        return v === '1' || v === 'true' || v === 'yes';
+                    };
+
+                    parsedMCQQuizzes.push({
+                        title: title,
+                        board: (lcRow['board'] || '').trim(),
+                        options: [
+                            { text: opt1Ans, correct: checkCorrect(lcRow['options_1_is_correct'] || lcRow['option_1_is_correct']) },
+                            { text: opt2Ans, correct: checkCorrect(lcRow['options_2_is_correct'] || lcRow['option_2_is_correct']) },
+                            { text: opt3Ans, correct: checkCorrect(lcRow['options_3_is_correct'] || lcRow['option_3_is_correct']) },
+                            { text: opt4Ans, correct: checkCorrect(lcRow['options_4_is_correct'] || lcRow['option_4_is_correct']) }
+                        ]
+                    });
+                }
+            }
+
+            const mcqSlideCount = parsedMCQQuizzes.length * 2; 
+            const totalSlidesToProcess = inputA4.length + mcqSlideCount + inputCQ.length;
+
+            if(totalSlidesToProcess === 0) {
+                throw new Error("Could not detect any valid slide data. Make sure you copied directly from Excel.");
+            }
+
+            log(`Data Detected: ${inputA4.length} A4 | ${parsedMCQQuizzes.length} MCQs | ${inputCQ.length} CQs`, 'ok');
 
             const pptx = new PptxGenJS();
             pptx.layout = 'LAYOUT_16x9'; 
@@ -443,7 +464,7 @@
             // ==========================================
             // 1. Process A4 Standard Slides
             // ==========================================
-            if(inputA4.length > 0) log(`--- Starting A4 Standard Generation (${inputA4.length} slides) ---`, 'info');
+            if(inputA4.length > 0) log(`--- Generating A4 Slides ---`, 'info');
             for (let l of inputA4) {
                 let slide = createBaseSlide();
                 let cols = l.split('\t');
@@ -473,17 +494,16 @@
                         align: 'left', valign: 'top', bullet: { type: 'bull', code: '2022' }, wrap: true, fit: 'shrink'
                     });
                 }
-                
                 processedCount++;
                 setProgress(10 + (processedCount / totalSlidesToProcess) * 80, `Formatting A4...`);
                 await sleep(5);
             }
 
             // ==========================================
-            // 2. Process MCQ Slides (Uniform Height Patch)
+            // 2. Process MCQ Slides (SMART WIDTH PATCH)
             // ==========================================
             if(parsedMCQQuizzes.length > 0) {
-                log(`--- Starting MCQ Generation (${parsedMCQQuizzes.length} Quizzes = ${mcqSlideCount} slides) ---`, 'info');
+                log(`--- Generating MCQ Slides ---`, 'info');
                 const labelFormat = document.querySelector('input[name="labelFormat"]:checked').value;
                 const labels = labelFormat === 'english' ? ['A', 'B', 'C', 'D'] : ['ক', 'খ', 'গ', 'ঘ'];
 
@@ -492,7 +512,6 @@
                     
                     const buildMCQSlide = (showAnswer) => {
                         let slide = createBaseSlide();
-                        
                         const qNumText = 'MCQ-' + (i+1).toString().padStart(2, '0');
                         
                         let qEst = estHeight(qNumText + "\n" + quiz.title, bW - 0.4, bSz, 1.2);
@@ -507,13 +526,25 @@
                             align: "left", valign: "top", margin: 10, fontFace: "Kalpurush", wrap: true, lineSpacing: bSz * 1.2, fit: 'shrink'
                         });
 
-                        // Reverted option width to the original sleek sizing
-                        const optW = Math.min(5.5, bW * 0.45); 
-                        const optX = bX + bW - optW; 
+                        // SMART DYNAMIC WIDTH CALCULATION
+                        let maxTextLen = 0;
+                        for (let j = 0; j < 4; j++) {
+                            let opt = quiz.options[j];
+                            if (!opt.text) continue;
+                            let textLen = (`${labels[j]}. ${opt.text}`).length;
+                            if (textLen > maxTextLen) maxTextLen = textLen;
+                        }
+
+                        // Rough estimate: ~0.13 inches per character at given font size, plus 0.4 margin padding
+                        let charWidthInches = (bSz / 18) * 0.13; 
+                        let estimatedW = (maxTextLen * charWidthInches) + 0.4; 
+
+                        // Keep it between 2.5 inches (sleek button) and the maximum allowed width (bW)
+                        const optW = Math.max(2.5, Math.min(bW, estimatedW));
+                        const optX = bX + bW - optW; // Anchor to the right edge
+                        
                         let currentY = mcqY + qBoxH + mcqGap;
 
-                        // --- UNIFORM HEIGHT CALCULATION ---
-                        // Pre-calculate the maximum height needed among all 4 options
                         let uniformOptH = 0.45;
                         for (let j = 0; j < 4; j++) {
                             let opt = quiz.options[j];
@@ -525,36 +556,33 @@
                         }
 
                         if (quiz.board && quiz.board.length > 0) {
+                            let boardEst = estHeight(quiz.board, optW - 0.2, 12, 1.2);
+                            let boardH = Math.max(0.35, boardEst);
+                            
                             slide.addText(quiz.board, {
                                 shape: ROUND_BOX, fill: { color: "FFA500" }, color: "000000",
-                                x: bX + bW - 2.5, y: currentY, w: 2.5, h: 0.35, 
+                                x: optX, y: currentY, w: optW, h: boardH, 
                                 align: "center", valign: "middle", fontSize: 12, fontFace: "Kalpurush", bold: true, fit: 'shrink'
                             });
-                            currentY += 0.45; 
+                            currentY += boardH + mcqGap; 
                         }
 
                         for (let j = 0; j < 4; j++) {
                             let opt = quiz.options[j];
                             if (!opt.text) continue;
-
                             let isCorrect = opt.correct && showAnswer;
 
-                            // Apply the uniform height to all option blocks
                             slide.addText(`${labels[j]}. ${opt.text}`, {
-                                shape: ROUND_BOX, 
-                                fill: { color: isCorrect ? "11FF7D" : "222222" }, 
-                                color: isCorrect ? "000000" : "FFFFFF",
+                                shape: ROUND_BOX, fill: { color: isCorrect ? "11FF7D" : "222222" }, color: isCorrect ? "000000" : "FFFFFF",
                                 x: optX, y: currentY, w: optW, h: uniformOptH,
                                 align: "left", valign: "middle", margin: 10, fontSize: bSz, fontFace: "Kalpurush", bold: true, wrap: true, lineSpacing: bSz * 1.2, fit: 'shrink'
                             });
-                            
                             currentY += uniformOptH + mcqGap; 
                         }
                     };
 
                     buildMCQSlide(false);
                     processedCount++;
-                    
                     buildMCQSlide(true);
                     processedCount++;
 
@@ -566,7 +594,7 @@
             // ==========================================
             // 3. Process CQ Smart Memory Slides
             // ==========================================
-            if(inputCQ.length > 0) log(`--- Starting CQ Engine (${inputCQ.length} slides) ---`, 'info');
+            if(inputCQ.length > 0) log(`--- Generating CQ Slides ---`, 'info');
             let memoryTitle = "CQ";
             let memoryUddipok = "";
 
@@ -610,14 +638,11 @@
                     let uddipokEst = estHeight(memoryTitle + "। " + uddipokClean, bW - 0.4, bSz, 1.2);
                     let dynamicBoxHeightFront = Math.max(0.5, uddipokEst);
 
-                    let boxContent = [
+                    slide.addText([
                         { text: memoryTitle + "। ", options: { color: "FFFFFF", bold: true, fontSize: bSz } },
                         { text: uddipokClean, options: { color: "FFFFFF", fontSize: bSz, lineSpacing: bSz * 1.2 } } 
-                    ];
-
-                    slide.addText(boxContent, {
-                        shape: ROUND_BOX, fill: { color: "222222" },
-                        x: bX, y: tY, w: bW, h: dynamicBoxHeightFront, 
+                    ], {
+                        shape: ROUND_BOX, fill: { color: "222222" }, x: bX, y: tY, w: bW, h: dynamicBoxHeightFront, 
                         align: 'left', valign: 'top', margin: 10, fontFace: "Kalpurush", wrap: true, fit: 'shrink'
                     });
 
@@ -644,7 +669,6 @@
                     let hasK_Kh = fullText.match(/(^|\n)\s*["'“”‘’\s]*(\(?ক\)?|\(?খ\)?)[.)\s]/);
 
                     if (hasG_Gh && !hasK_Kh) {
-                        
                         let uddipokClean = memoryUddipok.replace(/\\n/g, '\n').trim().replace(/\n{3,}/g, '\n\n');
                         let uddipokEst = estHeight(memoryTitle + "। " + uddipokClean, bW - 0.4, 12, 1.2);
                         let dynamicBoxHeightGGh = Math.max(0.4, uddipokEst);
@@ -653,8 +677,7 @@
                             { text: memoryTitle + "। ", options: { color: "FFFFFF", bold: true, fontSize: 12 } },
                             { text: uddipokClean, options: { color: "FFFFFF", fontSize: 12, lineSpacing: 12 * 1.2 } }
                         ], {
-                            shape: ROUND_BOX, fill: { color: "222222" },
-                            x: bX, y: tY, w: bW, h: dynamicBoxHeightGGh,  
+                            shape: ROUND_BOX, fill: { color: "222222" }, x: bX, y: tY, w: bW, h: dynamicBoxHeightGGh,  
                             align: 'left', valign: 'top', margin: 10, fontFace: "Kalpurush", wrap: true, fit: 'shrink'
                         });
 
@@ -663,7 +686,6 @@
 
                         let qaTextItems = [];
                         let hasColoredFirstQuestion = false; 
-                        
                         gGhFullText.split('\n').forEach(line => {
                             let cleanLine = line.trim();
                             if (!cleanLine) return;
@@ -686,8 +708,7 @@
                         let dynBY = Math.max(bY, tY + titleEst + 0.1);
 
                         slide.addText(titleClean, {
-                            x: tX, y: tY, w: tW, h: titleEst,
-                            fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
+                            x: tX, y: tY, w: tW, h: titleEst, fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
                             valign: 'top', lineSpacing: tSz * 1.2, fit: 'shrink'
                         });
 
@@ -696,8 +717,7 @@
                             if(bullets.length === 0) bullets = [rowTextB];
 
                             let textItems = bullets.map(txt => ({
-                                text: txt,
-                                options: { fontSize: bSz, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacing: spacingVal }
+                                text: txt, options: { fontSize: bSz, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacing: spacingVal }
                             }));
 
                             slide.addText(textItems, {
