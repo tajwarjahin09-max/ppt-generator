@@ -97,7 +97,7 @@
 
 <div class="container">
     <div class="header">
-        <div class="badge">Unified Engine v6.20 (Box Margin Math Patch)</div>
+        <div class="badge">Unified Engine v6.28 (Sleek Badge Overhaul)</div>
         <h1>Master Slide Automation</h1>
         <p style="color: var(--muted); font-size: 14px;">Paste your entire Excel sheet below. The engine will figure it out.</p>
     </div>
@@ -203,7 +203,7 @@ CQ-1	Uddipok text here...
 </div>
 
 <script>
-    const KEY = 'unified_master_slide_dashboard_v6_20';
+    const KEY = 'unified_master_slide_dashboard_v6_28';
     let bgImage = null;
     let generatedBlob = null;
 
@@ -304,18 +304,21 @@ CQ-1	Uddipok text here...
 
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // --- ACCURATE INTERNAL MARGIN MATH PATCH ---
-    const estHeight = (text, width, fSize, lineSpacingMult) => {
+    const estHeight = (text, width, fSize, lineSpacingMult, isBox = false) => {
         if(!text) return 0;
         let str = text.toString().replace(/\\n/g, '\n').trim().replace(/\n{3,}/g, '\n\n');
-        const charsPerLine = width * (145 / fSize); 
+        
+        const charsPerLine = width * (115 / fSize); 
         const lines = str.split('\n').reduce((sum, line) => {
-            let visualLength = line.length; 
-            return sum + Math.max(1, Math.ceil(visualLength / charsPerLine));
+            let visualLength = line.length * 0.65; 
+            if (visualLength === 0) return sum + 1; 
+            return sum + Math.ceil(visualLength / charsPerLine);
         }, 0);
-        // The boxes use 'margin: 10' which equals 20 points of total vertical padding.
-        // 20pt / 72 = 0.28 inches. This MUST be 0.3 to safely contain the text without hitting the floor.
-        return (lines * (fSize / 72) * lineSpacingMult) + 0.3; 
+        
+        let actualLineMultiplier = lineSpacingMult * 1.2;
+        let baseHeight = (lines * (fSize / 72) * actualLineMultiplier);
+        
+        return isBox ? baseHeight + 0.3 : baseHeight + 0.05; 
     };
 
     async function generateUnifiedPPTX() {
@@ -481,18 +484,21 @@ CQ-1	Uddipok text here...
                 let titleEst = 0;
 
                 for(let s = bSzMax; s >= bSzMin; s--) {
-                    titleEst = estHeight(rowTitle, tW, tSz, 1.2); 
-                    dynBY = Math.max(bY, tY + titleEst + 0.13);
-                    let bEst = estHeight(rowBody, bW, s, 1.2);
+                    titleEst = estHeight(rowTitle, tW, tSz, 1.2, false); 
+                    dynBY = rowTitle ? Math.max(bY, tY + titleEst + 0.13) : bY;
+                    
+                    let bEst = estHeight(rowBody, bW, s, 1.3, false);
                     if(dynBY + bEst <= slideBottomLimit) { activeSize = s; break; }
                     activeSize = s;
                 }
 
-                slide.addText(rowTitle, {
-                    x: tX, y: tY, w: tW, h: titleEst,
-                    fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
-                    valign: 'top', lineSpacing: tSz * 1.2
-                });
+                if (rowTitle) {
+                    slide.addText(rowTitle, {
+                        x: tX, y: tY, w: tW, h: titleEst,
+                        fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
+                        valign: 'top', lineSpacingMultiple: 1.2
+                    });
+                }
 
                 if (rowBody) {
                     let bullets = rowBody.split('\n').filter(txt => txt.trim());
@@ -500,7 +506,7 @@ CQ-1	Uddipok text here...
 
                     let textItems = bullets.map(txt => ({
                         text: txt,
-                        options: { fontSize: activeSize, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacing: activeSize * 1.2 }
+                        options: { fontSize: activeSize, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacingMultiple: 1.3 }
                     }));
 
                     let availHeight = Math.max(0.4, slideBottomLimit - dynBY);
@@ -533,10 +539,14 @@ CQ-1	Uddipok text here...
                         let finalQBoxH = 0.8;
                         let finalOptW = bW;
                         let finalUniformOptH = 0.6;
+                        let finalBoardW = 0;
+                        let finalBoardH = 0.38;
 
-                        for(let s = bSzMax; s >= bSzMin; s--) {
-                            let qEst = estHeight(qNumText + "\n" + quiz.title, bW - 0.4, s, 1.2);
-                            let qBoxH = Math.max(0.8, qEst);
+                        let mcqMinSize = 20; 
+
+                        for(let s = bSzMax; s >= mcqMinSize; s--) {
+                            let qEst = estHeight(qNumText + "\n" + quiz.title, bW - 0.4, s, 1.2, true);
+                            let qBoxH = Math.max(0.6, qEst);
                             
                             let maxTextLen = 0;
                             for (let j = 0; j < 4; j++) {
@@ -551,14 +561,29 @@ CQ-1	Uddipok text here...
                             let uniformOptH = 0.6;
                             for (let j = 0; j < 4; j++) {
                                 if (quiz.options[j].text) {
-                                    uniformOptH = Math.max(uniformOptH, estHeight(`${labels[j]}. ${quiz.options[j].text}`, optW - 0.4, s, 1.2));
+                                    uniformOptH = Math.max(uniformOptH, estHeight(`${labels[j]}. ${quiz.options[j].text}`, optW - 0.4, s, 1.2, true));
                                 }
                             }
                             
                             let totalH = mcqY + qBoxH + mcqGap;
+                            let boardW = 0;
+                            let renderBoardH = 0.38;
+
                             if (quiz.board && quiz.board.length > 0) {
-                                totalH += Math.max(0.45, estHeight(quiz.board, optW - 0.2, 12, 1.2)) + mcqGap;
+                                // THE FIX: Custom width math just for the badge
+                                let estimatedBoardW = (quiz.board.length * 0.13) + 0.6; 
+                                boardW = Math.min(estimatedBoardW, bW); 
+                                
+                                // Calculate actual lines needed for badge based on generous width
+                                let charsPerLine = (boardW - 0.2) * (115 / 12);
+                                let visLen = quiz.board.length * 0.65;
+                                let requiredLines = Math.max(1, Math.ceil(visLen / charsPerLine));
+                                
+                                // Clean, tight height mapping: 0.38 for single line.
+                                renderBoardH = 0.38 + ((requiredLines - 1) * 0.2);
+                                totalH += renderBoardH + mcqGap;
                             }
+                            
                             let activeOpts = quiz.options.filter(o => o.text).length;
                             totalH += activeOpts * (uniformOptH + mcqGap);
                             
@@ -567,12 +592,16 @@ CQ-1	Uddipok text here...
                                 finalQBoxH = qBoxH;
                                 finalOptW = optW;
                                 finalUniformOptH = uniformOptH;
+                                finalBoardW = boardW;
+                                finalBoardH = renderBoardH;
                                 break;
                             }
                             activeSize = s;
                             finalQBoxH = qBoxH;
                             finalOptW = optW;
                             finalUniformOptH = uniformOptH;
+                            finalBoardW = boardW;
+                            finalBoardH = renderBoardH;
                         }
 
                         slide.addText([
@@ -580,20 +609,22 @@ CQ-1	Uddipok text here...
                             { text: quiz.title, options: { color: "FFFFFF", bold: true, fontSize: activeSize } }
                         ], {
                             shape: ROUND_BOX, fill: { color: "222222" }, x: bX, y: mcqY, w: bW, h: finalQBoxH,
-                            align: "left", valign: "top", margin: 10, fontFace: "Kalpurush", wrap: true, lineSpacing: activeSize * 1.2
+                            align: "left", valign: "top", margin: 10, fontFace: "Kalpurush", wrap: true, lineSpacingMultiple: 1.2
                         }); 
 
                         const optX = bX + bW - finalOptW; 
                         let currentY = mcqY + finalQBoxH + mcqGap;
 
                         if (quiz.board && quiz.board.length > 0) {
-                            let boardH = Math.max(0.45, estHeight(quiz.board, finalOptW - 0.2, 12, 1.2));
+                            let boardX = bX + bW - finalBoardW;
+                            
                             slide.addText(quiz.board, {
                                 shape: ROUND_BOX, fill: { color: "FFA500" }, color: "000000",
-                                x: optX, y: currentY, w: finalOptW, h: boardH, 
-                                align: "center", valign: "middle", fontSize: 12, fontFace: "Kalpurush", bold: true
+                                x: boardX, y: currentY, w: finalBoardW, h: finalBoardH, 
+                                align: "center", valign: "middle", fontSize: 12, fontFace: "Kalpurush", bold: true,
+                                margin: [4, 8, 4, 8] // Forces the text to stay snug in the 0.38 tall box
                             }); 
-                            currentY += boardH + mcqGap; 
+                            currentY += finalBoardH + mcqGap; 
                         }
 
                         for (let j = 0; j < 4; j++) {
@@ -604,7 +635,7 @@ CQ-1	Uddipok text here...
                             slide.addText(`${labels[j]}. ${opt.text}`, {
                                 shape: ROUND_BOX, fill: { color: isCorrect ? "11FF7D" : "222222" }, color: isCorrect ? "000000" : "FFFFFF",
                                 x: optX, y: currentY, w: finalOptW, h: finalUniformOptH,
-                                align: "left", valign: "middle", margin: 10, fontSize: activeSize, fontFace: "Kalpurush", bold: true, wrap: true, lineSpacing: activeSize * 1.2
+                                align: "left", valign: "middle", margin: 10, fontSize: activeSize, fontFace: "Kalpurush", bold: true, wrap: true, lineSpacingMultiple: 1.2
                             }); 
                             currentY += finalUniformOptH + mcqGap; 
                         }
@@ -668,10 +699,10 @@ CQ-1	Uddipok text here...
 
                     for(let s = bSzMax; s >= bSzMin; s--) {
                         let uddipokCleanTemp = memoryUddipok.replace(/\\n/g, '\n').trim().replace(/\n{3,}/g, '\n\n');
-                        let uddipokEst = estHeight(memoryTitle + "। " + uddipokCleanTemp, bW - 0.4, s, 1.2);
+                        let uddipokEst = estHeight(memoryTitle + "। " + uddipokCleanTemp, bW - 0.4, s, 1.3, true);
                         finalBoxH = Math.max(0.65, uddipokEst);
                         let startY = tY + finalBoxH + 0.13;
-                        let qaEst = estHeight(localQA, bW, s, 1.2);
+                        let qaEst = estHeight(localQA, bW, s, 1.3, false);
                         
                         if(startY + qaEst <= slideBottomLimit) { activeSize = s; break; }
                         activeSize = s;
@@ -681,7 +712,7 @@ CQ-1	Uddipok text here...
 
                     slide.addText([
                         { text: memoryTitle + "। ", options: { color: "FFFFFF", bold: true, fontSize: activeSize } },
-                        { text: uddipokClean, options: { color: "FFFFFF", fontSize: activeSize, lineSpacing: activeSize * 1.2 } } 
+                        { text: uddipokClean, options: { color: "FFFFFF", fontSize: activeSize, lineSpacingMultiple: 1.3 } } 
                     ], {
                         shape: ROUND_BOX, fill: { color: "222222" }, x: bX, y: tY, w: bW, h: finalBoxH, 
                         align: 'left', valign: 'top', margin: 10, fontFace: "Kalpurush", wrap: true
@@ -704,7 +735,7 @@ CQ-1	Uddipok text here...
                         
                         slide.addText(qaTextItems, {
                             x: bX, y: startY, w: bW, h: availHeight, 
-                            fontFace: "Kalpurush", align: 'left', valign: 'top', lineSpacing: activeSize * 1.2, wrap: true
+                            fontFace: "Kalpurush", align: 'left', valign: 'top', lineSpacingMultiple: 1.3, wrap: true
                         }); 
                     }
 
@@ -722,10 +753,10 @@ CQ-1	Uddipok text here...
                         let finalBoxH = 0.5;
 
                         for(let s = bSzMax; s >= bSzMin; s--) {
-                            let uddipokEst = estHeight(memoryTitle + "। " + uddipokClean, bW - 0.4, 12, 1.2);
+                            let uddipokEst = estHeight(memoryTitle + "। " + uddipokClean, bW - 0.4, 12, 1.3, true);
                             finalBoxH = Math.max(0.5, uddipokEst);
                             let startY = tY + finalBoxH + 0.13;
-                            let qaEst = estHeight(gGhFullText, bW, s, 1.2);
+                            let qaEst = estHeight(gGhFullText, bW, s, 1.3, false);
                             
                             if(startY + qaEst <= slideBottomLimit) { activeSize = s; break; }
                             activeSize = s;
@@ -733,7 +764,7 @@ CQ-1	Uddipok text here...
 
                         slide.addText([
                             { text: memoryTitle + "। ", options: { color: "FFFFFF", bold: true, fontSize: 12 } },
-                            { text: uddipokClean, options: { color: "FFFFFF", fontSize: 12, lineSpacing: 12 * 1.2 } }
+                            { text: uddipokClean, options: { color: "FFFFFF", fontSize: 12, lineSpacingMultiple: 1.3 } }
                         ], {
                             shape: ROUND_BOX, fill: { color: "222222" }, x: bX, y: tY, w: bW, h: finalBoxH,  
                             align: 'left', valign: 'top', margin: 10, fontFace: "Kalpurush", wrap: true
@@ -757,7 +788,7 @@ CQ-1	Uddipok text here...
 
                         slide.addText(qaTextItems, {
                             x: bX, y: startY, w: bW, h: availHeight, 
-                            fontFace: "Kalpurush", align: 'left', valign: 'top', lineSpacing: activeSize * 1.2, wrap: true
+                            fontFace: "Kalpurush", align: 'left', valign: 'top', lineSpacingMultiple: 1.3, wrap: true
                         }); 
 
                     } else {
@@ -768,24 +799,26 @@ CQ-1	Uddipok text here...
                         let titleEst = 0;
 
                         for(let s = bSzMax; s >= bSzMin; s--) {
-                            titleEst = estHeight(titleClean, tW, tSz, 1.2); 
-                            dynBY = Math.max(bY, tY + titleEst + 0.13);
-                            let bEst = estHeight(rowTextB, bW, s, 1.2);
+                            titleEst = estHeight(titleClean, tW, tSz, 1.2, false); 
+                            dynBY = titleClean ? Math.max(bY, tY + titleEst + 0.13) : bY;
+                            let bEst = estHeight(rowTextB, bW, s, 1.3, false);
                             if(dynBY + bEst <= slideBottomLimit) { activeSize = s; break; }
                             activeSize = s;
                         }
 
-                        slide.addText(titleClean, {
-                            x: tX, y: tY, w: tW, h: titleEst, fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
-                            valign: 'top', lineSpacing: tSz * 1.2
-                        }); 
+                        if (titleClean) {
+                            slide.addText(titleClean, {
+                                x: tX, y: tY, w: tW, h: titleEst, fontSize: tSz, fontFace: "Kalpurush", color: "FFC000", bold: true,
+                                valign: 'top', lineSpacingMultiple: 1.2
+                            }); 
+                        }
 
                         if (rowTextB) {
                             let bullets = rowTextB.split('\\n').filter(l => l.trim());
                             if(bullets.length === 0) bullets = [rowTextB];
 
                             let textItems = bullets.map(txt => ({
-                                text: txt, options: { fontSize: activeSize, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacing: activeSize * 1.2 }
+                                text: txt, options: { fontSize: activeSize, fontFace: "Kalpurush", color: "FFFFFF", breakLine: true, lineSpacingMultiple: 1.3 }
                             }));
 
                             let availHeight = Math.max(0.4, slideBottomLimit - dynBY);
